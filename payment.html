@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Payment</title>
+    <link rel="icon" href="icon-32.png" type="image/png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+    <style>
+        /* Smooth fade transition */
+        #qr-container {
+            transition: opacity 0.5s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-sm mx-auto overflow-hidden rounded-xl shadow-2xl bg-white">
+        
+        <div class="bg-teal-500 p-4">
+            <h1 class="text-xl font-bold text-white text-center">Payment Request</h1>
+        </div>
+
+        <div class="p-6 text-center">
+            
+            <div id="timer-wrapper" class="mb-4">
+                <span class="text-gray-500 text-sm">Link expires in:</span>
+                <div id="timer" class="text-2xl font-mono font-bold text-red-500">--:--</div>
+            </div>
+            
+            <div id="expired-msg" class="hidden text-red-600 font-bold text-xl mb-4">
+                LINK EXPIRED
+            </div>
+
+            <h2 class="text-3xl font-bold text-gray-800 mb-6" id="display-amount">₹0.00</h2>
+
+            <div id="qr-container" class="mt-6 border-t border-gray-200 pt-6">
+                
+                <p class="text-center font-medium text-gray-700 mb-4">Scan & pay with any UPI app</p>
+
+                <div id="qrcode" class="inline-block mt-4 p-2 border border-gray-200 rounded-lg bg-white"></div>
+                
+                <p id="upi-id-display" class="text-center text-xs text-gray-400 mt-4 font-mono"></p>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Configuration ---
+        const UPI_ID = "BHARATPE.8V0T0M8X7B02370@fbpe"; 
+        const PAYEE_NAME = "CASH UPI ATM";
+        
+        // --- Get URL Parameters ---
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get('amt');
+        const timestamp = parseInt(urlParams.get('ts'));
+
+        // --- Elements ---
+        const timerEl = document.getElementById('timer');
+        const timerWrapper = document.getElementById('timer-wrapper');
+        const expiredMsg = document.getElementById('expired-msg');
+        const qrContainer = document.getElementById('qr-container');
+        const displayAmount = document.getElementById('display-amount');
+        const upiIdDisplay = document.getElementById('upi-id-display');
+
+        // Set UPI ID Text
+        upiIdDisplay.textContent = `UPI ID: ${UPI_ID}`;
+
+        // --- Logic ---
+        if (!amount || !timestamp) {
+            document.body.innerHTML = "<div class='flex items-center justify-center h-screen'><h1 class='text-xl text-gray-500'>Invalid Payment Link</h1></div>";
+        } else {
+            displayAmount.textContent = `₹${parseFloat(amount).toFixed(2)}`;
+            startTimer();
+            generatePaymentDetails();
+        }
+
+        function generatePaymentDetails() {
+            const upiString = `upi://pay?pa=${encodeURIComponent(UPI_ID)}&pn=${encodeURIComponent(PAYEE_NAME)}&am=${amount}&cu=INR`;
+            
+            // Generate QR
+            new QRCode(document.getElementById("qrcode"), {
+                text: upiString,
+                width: 180,
+                height: 180,
+                colorDark: "#0d9488",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        function startTimer() {
+            // Timer set to 10 minutes
+            const timeLimit = 10 * 60 * 1000; 
+            const endTime = timestamp + timeLimit;
+
+            const interval = setInterval(() => {
+                const now = Date.now();
+                const distance = endTime - now;
+
+                if (distance < 0) {
+                    clearInterval(interval);
+                    expireLink();
+                    return;
+                }
+
+                // Format Time
+                const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+                timerEl.textContent = `${minutes}:${seconds < 10 ? '0' + seconds : seconds}`;
+            }, 1000);
+        }
+
+        function expireLink() {
+            // 1. Hide the countdown timer
+            timerWrapper.style.display = 'none';
+            
+            // 2. Show the "EXPIRED" error message
+            expiredMsg.classList.remove('hidden');
+            
+            // 3. Fade out the QR container
+            if (qrContainer) {
+                qrContainer.style.opacity = '0.1'; 
+                qrContainer.style.pointerEvents = 'none'; 
+            }
+        }
+    </script>
+</body>
+</html>
